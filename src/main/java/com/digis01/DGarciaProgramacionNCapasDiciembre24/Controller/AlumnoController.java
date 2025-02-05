@@ -4,30 +4,42 @@ import com.digis01.DGarciaProgramacionNCapasDiciembre24.ML.Alumno;
 import com.digis01.DGarciaProgramacionNCapasDiciembre24.ML.AlumnoDireccion;
 import com.digis01.DGarciaProgramacionNCapasDiciembre24.ML.Result;
 import com.digis01.DGarciaProgramacionNCapasDiciembre24.ML.Semestre;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 @Controller
 @RequestMapping("/Alumno")
 public class AlumnoController {
 
     String urlBase = "http://localhost:8080";
-    
+
     @GetMapping
     public String Index(Model model) {
 
         //RestTemplate - consumo de servicios
         RestTemplate restTemplate = new RestTemplate();
+        //
 
-        ResponseEntity<Result<AlumnoDireccion>> response = restTemplate.exchange(urlBase + "/Alumnoapi",
+        ResponseEntity<Result<AlumnoDireccion>> response = restTemplate.exchange(
+                urlBase + "/Alumnoapi",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 new ParameterizedTypeReference<Result<AlumnoDireccion>>() {
@@ -38,9 +50,9 @@ public class AlumnoController {
         model.addAttribute("alumnoBusqueda", alumnoBusqueda);
 
         Result<AlumnoDireccion> result = response.getBody();
-        
+
         response.getStatusCode();
-        
+
         if (result.correct) {
             model.addAttribute("listaAlumno", result.objects);
         } else {
@@ -166,10 +178,10 @@ public class AlumnoController {
 //        return result;
 //    }
 //
-//    @GetMapping("/CargaMasiva")
-//    public String Inicio() {
-//        return "CargaMasivaIndex";
-//    }
+    @GetMapping("/CargaMasiva")
+    public String Inicio() {
+        return "CargaMasivaIndex";
+    }
 //
 //    @PostMapping("/CargaMasiva")
 //    public String CargaMasiva(@RequestParam MultipartFile archivo, Model model, HttpSession session) throws IOException {
@@ -295,4 +307,41 @@ public class AlumnoController {
 //        Result result = alumnoDAOImplementation.BajaLogicaJPA(IdAlumno);
 //        return result;
 //    }
+    
+    
+    @PostMapping("/CargaMasiva")
+    public String CargaMasiva(@RequestParam("archivo") MultipartFile archivo){
+        
+        RestTemplate restTemplate = new RestTemplate();
+        try {
+            ByteArrayResource byteArrayResource = new ByteArrayResource(archivo.getBytes()){
+                @Override
+                public String getFilename(){
+                    return archivo.getOriginalFilename();
+                }
+            };
+            //collectors 
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("archivo", byteArrayResource);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            
+            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+            
+            ResponseEntity<Result<Integer>> response = restTemplate.exchange(
+                    urlBase + "/Alumnoapi/CargaMasiva"
+                    , HttpMethod.POST
+                    ,requestEntity 
+                    , new ParameterizedTypeReference<Result<Integer>>(){ 
+                    });
+            
+            System.out.println(response.getStatusCode());
+        } catch (Exception ex) {
+            System.out.println(ex.getLocalizedMessage());
+        }
+        
+        
+        return "";
+    }
 }
